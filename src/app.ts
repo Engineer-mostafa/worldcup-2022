@@ -4,7 +4,8 @@ import { Client, Pool } from 'pg';
 import ensureValidToken  from './validations';
 import dotenv = require('dotenv');
 import jwt = require('jsonwebtoken')
-
+import moment = require('moment'
+)
 dotenv.config();
 const app: Express = express();
 const serverPort = process.env.PORT || 5000; 
@@ -60,7 +61,10 @@ app.post(apiroot+ 'users/login',async (req: Request, res: Response) => {
       res.status(200);
       res.json({
         result: "success",
-        token: jwt.sign({username: username},
+        token: jwt.sign({
+                         username: username,
+                         expiresOn: moment().add(1,'day').toDate()
+                        },
                         process.env.JWTSECRET!!)
         });  
     }
@@ -189,7 +193,7 @@ app.post(apiroot+ 'users/remove', async (req: Request, res: Response) => {
 });
 
 app.post(apiroot+ 'users/edit', async (req: Request, res: Response) => {
-  const {isValid,isExpired,username} = ensureValidToken(req.get('authorization'));
+  const {isValid,isExpired,username} = ensureValidToken(req.get('authorization')?.split(' ')[1]);
   if(!isValid) {
     res.status(500);
     res.json({
@@ -209,7 +213,8 @@ app.post(apiroot+ 'users/edit', async (req: Request, res: Response) => {
 
   res.status(200);
   res.json({
-    
+    result: "success",
+    msg: "valid token"
   })
 
 
