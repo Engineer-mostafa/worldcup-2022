@@ -1,11 +1,13 @@
 import express = require('express');
-import { Express, Request, Response } from 'express';
-import { Client, Pool } from 'pg';
-import ensureValidToken  from './validations';
+import { Express, NextFunction, Request, Response } from 'express';
+import { Pool }         from 'pg';
+import {ensureValidToken,ensureValidUserInfo} from './validations';
 import dotenv = require('dotenv');
-import jwt = require('jsonwebtoken')
-import moment = require('moment'
-)
+import jwt    = require('jsonwebtoken');
+import moment = require('moment');
+import { join } from 'path';
+import { string } from 'joi';
+
 dotenv.config();
 const app: Express = express();
 const serverPort = process.env.PORT || 5000; 
@@ -20,17 +22,63 @@ const dbsettings = {
 const sql = new Pool(dbsettings);
 
 const apiroot = process.env.APIROOT;
-
 app.use(express.json());
 
+const nonAuthedRoutes = [
+  'users/new',
+  'users/login',
+  /* Those are very sensitive routes only available to the app's admin, but their way of authentication is an encrypted secret phrase in the request's body, not a signed JWT token */
+  'users/authorize',
+  'users/remove',
+  'users/list',
+].map((route) => apiroot+route); 
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if(nonAuthedRoutes.includes(req.path)) {
+    return next();
+  } 
+
+  const {isValid,isExpired,username} = ensureValidToken(req.get('authorization')?.split(' ')[1]);
+
+  if(!isValid) {
+    res.status(500);
+    res.json({
+      result: "failure",
+      msg: "invalid token : token is not signed with a trusted secret key"
+    });
+    return;
+  }
+  if(isExpired) {
+    res.status(500);
+    res.json({
+      result: "failure",
+      msg: "invalid token : token expired, login again to obtain a fresh token"
+    })
+    return;
+  }
+
+  req.body.authedUsername = username;
+  next();
+});
+
 app.post(apiroot+ 'users/new', async (req: Request, res: Response) => {
+  const {isValid,errs,info} = ensureValidUserInfo(req.body);
+  if(!isValid) {
+      res.status(500);
+      res.json({
+        result: "failure",
+        msg: "invalid user info : "+ errs.join(" , ")
+      })
+      return;
+  }
+
+  const {username,password,firstname,lastname,
+         birthdate,gender,nationality,email,role} = info!!;
+         
   const client = await sql.connect();
   try {
-    const {username,password,firstname,lastname,
-           birthdate,gender,nationality,email,role} = req.body;
-    
-    await client.query(`INSERT INTO "Users"("username","password","firstname","lastname","birthdate","gender","nationality","email","role")
-                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[username,password,firstname,lastname,birthdate,gender,nationality,email,role]);
+    await client.query('INSERT INTO "Users"("username","password","firstname","lastname","birthdate","gender","nationality","email","role") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+                       [username,password,firstname,lastname,birthdate,gender,nationality || "NULL",email,role]);
   
     res.status(200);
     res.json({
@@ -192,32 +240,34 @@ app.post(apiroot+ 'users/remove', async (req: Request, res: Response) => {
   }
 });
 
+
+//AUTHED 
 app.post(apiroot+ 'users/edit', async (req: Request, res: Response) => {
-  const {isValid,isExpired,username} = ensureValidToken(req.get('authorization')?.split(' ')[1]);
-  if(!isValid) {
-    res.status(500);
+  const client = await sql.connect();
+  try {
+    const {username,password,firstname,lastname,
+           birthdate,gender,nationality,email,role} = req.body;
+    
+    await client.query(`INSERT INTO "Users"("username","password","firstname","lastname","birthdate","gender","nationality","email","role")
+                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,[username,password,firstname,lastname,birthdate,gender,nationality,email,role]);
+  
+    res.status(200);
     res.json({
-      result: "failure",
-      msg: "invalid token : token is not signed with a trusted secret key"
+      result: "success",
+      msg: "successfully edited user "+ (req.body.authedUsername as string)
     });
-    return;
-  }
-  if(isExpired) {
+  } 
+  catch (error) {
     res.status(500);
     res.json({
       result: "failure",
-      msg: "invalid token : token expired, login again to obtain a fresh token"
-    })
-    return;
+      msg: "cannot edit user "+ (req.body.authedUsername as string)
+    });
+    console.log(error);
   }
-
-  res.status(200);
-  res.json({
-    result: "success",
-    msg: "valid token"
-  })
-
-
+  finally {
+    client.release();
+  }
 });
 
 app.listen(serverPort, () => {
