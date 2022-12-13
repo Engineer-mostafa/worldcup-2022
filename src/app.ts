@@ -1,12 +1,10 @@
-import express = require('express');
+const express = require('express');
 import { Express, NextFunction, Request, Response } from 'express';
-import { Pool }         from 'pg';
-import {ensureValidToken,ensureValidUserInfo} from './validations';
-import dotenv = require('dotenv');
-import jwt    = require('jsonwebtoken');
-import moment = require('moment');
-import { join } from 'path';
-import { string } from 'joi';
+import { Pool } from 'pg';
+import { ensureValidToken, ensureValidUserInfo } from './validations';
+const dotenv = require('dotenv');
+const jwt    = require('jsonwebtoken');
+const moment = require('moment');
 
 dotenv.config();
 const app: Express = express();

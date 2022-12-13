@@ -53,32 +53,31 @@ const userSchema = Joi.object({
     firstname: Joi.string()
                   .required(),
     /************************ */
-    lastname:  Joi.string()
-                  .required(),
+    lastname: Joi.string()
+                 .required(),
     /************************ */
     birthdate: Joi.date()
                   .less('now')
                   .required(),
     /************************ */
-    gender:       Joi.string()
-                     .lowercase()
-                     .valid('male','female')
-                     .required(),
+    gender: Joi.string()
+               .lowercase()
+               .valid('male','female')
+               .required(),
     /************************ */
-    nationality:  Joi.string()
-                     .insensitive()
-                     .valid(...nationalities)
-                     .optional()
-                     .error(() => Error("custom")),
+    nationality: Joi.string()
+                    .insensitive()
+                    .valid(...nationalities)
+                    .optional(),
     /************************ */
     email: Joi.string()
               .email()
               .required(),
     /************************ */
-    role:  Joi.string()
-              .lowercase()
-              .valid('fan','manager')
-              .required()
+    role: Joi.string()
+             .lowercase()
+             .valid('fan','manager')
+             .required()
 });
 
 
@@ -100,5 +99,16 @@ interface UserInfoValidationResult {
 }
 
 export function ensureValidUserInfo(reqBody : object) : UserInfoValidationResult {
+    const {value,error} = userSchema.validate(reqBody,
+                                              {abortEarly: false});
+    
+    if(error) {
+        return {
+            isValid: false,
+            errs: error.details.map((errItem) => errItem.message)
+        };
+    }
 
+    return {isValid: true, errs: [],
+            info: value as UserInfo};
 }
