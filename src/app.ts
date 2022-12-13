@@ -1,10 +1,15 @@
+//SERVER 
 const express = require('express');
 import { Express, NextFunction, Request, Response } from 'express';
+//DATABASE
 import { Pool } from 'pg';
-import { ensureValidToken, ensureValidUserInfo } from './validations';
-const dotenv = require('dotenv');
-const jwt    = require('jsonwebtoken');
-const moment = require('moment');
+//CONFIG
+import dotenv = require('dotenv');
+//JSON RESPONSES
+import { responses } from './responses';
+//VALIDATIONS
+import ensureValidToken from './validations/tokens';
+import ensureValidUserInfo from './validations/userinfo'
 
 dotenv.config();
 const app: Express = express();
@@ -63,10 +68,7 @@ app.post(apiroot+ 'users/new', async (req: Request, res: Response) => {
   const {isValid,errs,info} = ensureValidUserInfo(req.body);
   if(!isValid) {
       res.status(500);
-      res.json({
-        result: "failure",
-        msg: "invalid user info : "+ errs.join(" , ")
-      })
+      res.json(responses.new.invalidUserInfo(errs));
       return;
   }
 
@@ -74,22 +76,23 @@ app.post(apiroot+ 'users/new', async (req: Request, res: Response) => {
          birthdate,gender,nationality,email,role} = info!!;
          
   const client = await sql.connect();
+
   try {
-    await client.query('INSERT INTO "Users"("username","password","firstname","lastname","birthdate","gender","nationality","email","role") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-                       [username,password,firstname,lastname,birthdate,gender,nationality || "NULL",email,role]);
-  
-    res.status(200);
-    res.json({
-      result: "success",
-      msg: "successfully created a new user"
-    });
+    const usernameExists = (await client.query('SELECT 1 FROM "Users" WHERE "username"=$1',[username])).rowCount == 1;
+    if(usernameExists) {
+      res.status(500);
+      res.json(responses.new.usernameAlreadyExists);
+    } else {
+      await client.query('INSERT INTO "Users"("username","password","firstname","lastname","birthdate","gender","nationality","email","role") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+                        [username,password,firstname,lastname,birthdate,gender,nationality ,email,role]);
+    
+      res.status(200);
+      res.json(responses.new.sucessful);
+    }
   } 
   catch (error) {
     res.status(500);
-    res.json({
-      result: "failure",
-      msg: "cannot create a new user"
-    });
+    res.json(responses.new.dbException);
     console.log(error);
   }
   finally {
@@ -103,31 +106,18 @@ app.post(apiroot+ 'users/login',async (req: Request, res: Response) => {
     const {username,password} = req.body;
     
     const result = await client.query('SELECT 1 FROM "Users" WHERE "username"=$1 AND "password"=$2',[username,password]);
+
     if(result.rowCount == 1) {
       res.status(200);
-      res.json({
-        result: "success",
-        token: jwt.sign({
-                         username: username,
-                         expiresOn: moment().add(1,'day').toDate()
-                        },
-                        process.env.JWTSECRET!!)
-        });  
-    }
-    else {
+      res.json(responses.login.successful(username));  
+    } else {
       res.status(500);
-      res.json({
-        result: "failure",
-        msg: `no such user ${username} or wrong password`
-      });
+      res.json(responses.login.noSuchUser(username));
     }
   }
   catch(error) {
       res.status(500);
-      res.json({
-        result: "failure",
-        msg: "cannot login"
-      });
+      res.json(responses.login.dbException);
       console.log(error);
   }
   finally {

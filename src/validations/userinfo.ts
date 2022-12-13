@@ -1,30 +1,4 @@
-import jwt = require('jsonwebtoken')
 import Joi = require('joi');
-import moment = require('moment');
-
-interface JwtTokenValidationResult {
-    isValid: boolean,
-    isExpired: boolean,
-    username: string
-}
-export function ensureValidToken(jwtTok : string|undefined): JwtTokenValidationResult {
-    if(!jwtTok) return {isValid:false,isExpired:false,username:""};
-
-    try {
-        const {expiresOn,username} = jwt.verify(jwtTok,process.env.JWTSECRET!!) as {expiresOn:Date,username:string};
-
-        if(expiresOn >= new Date()) return {isValid:true,isExpired:true,username:""};
-
-        return {isValid: true,
-                isExpired: false,
-                username: username};
-    }
-    catch(error) {
-        console.log(error);
-        return {isValid:false,isExpired:false,username:""};
-    }
-}
-
 
 const nationalities = ['Afghan','Albanian','Algerian','American','Andorran','Angolan','Antiguans and Barbudan','Argentine','Armenian','Aruban','Australian','Austrian','Azerbaijani',
 'Bahamian','Bahraini','Bangladeshi','Barbadian','Basque','Belarusian','Belgian','Belizean','Beninese','Bermudian','Bhutanese','Bolivian','Bosniak','Bosnians and Herzegovinian','Botswana',
@@ -40,7 +14,8 @@ const nationalities = ['Afghan','Albanian','Algerian','American','Andorran','Ang
 'Réunionnai','Romanian','Russian','Baltic Russian','Rwandan','Saint Kitts and Nevi','Saint Lucian','Salvadoran','Sammarinese','Samoan','São Tomé and Príncipe','Saudi','Scot','Senegalese',
 'Serb','Seychelloi','Sierra Leonean','Singaporean','Slovak','Slovene','Solomon Islander','Somali','Somalilander','Sotho','South African','Spaniard','Sri Lankan','Sudanese','Surinamese',
 'Swazi','Swede','Swis','Syriac','Syrian','Taiwanese','Tamil','Tajik','Tanzanian','Thai','Tibetan','Tobagonian','Togolese','Tongan','Trinidadian','Tunisian','Turk','Tuvaluan','Ugandan',
-'Ukrainian','Uruguayan','Uzbek','Vanuatuan','Venezuelan','Vietnamese']
+'Ukrainian','Uruguayan','Uzbek','Vanuatuan','Venezuelan','Vietnamese'];
+
 const userSchema = Joi.object({
     /************************ */
     username: Joi.string()
@@ -98,17 +73,15 @@ interface UserInfoValidationResult {
     info?: UserInfo
 }
 
-export function ensureValidUserInfo(reqBody : object) : UserInfoValidationResult {
+export default function ensureValidUserInfo(reqBody : object) : UserInfoValidationResult {
     const {value,error} = userSchema.validate(reqBody,
                                               {abortEarly: false});
-    
     if(error) {
         return {
             isValid: false,
             errs: error.details.map((errItem) => errItem.message)
         };
     }
-
     return {isValid: true, errs: [],
             info: value as UserInfo};
 }
