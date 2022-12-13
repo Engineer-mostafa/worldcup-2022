@@ -9,7 +9,8 @@ import dotenv = require('dotenv');
 import { responses } from './responses';
 //VALIDATIONS
 import ensureValidToken from './validations/tokens';
-import ensureValidUserInfo from './validations/userinfo'
+import ensureValidUserInfo from './validations/userinfo';
+import ensureValidLoginInfo from './validations/logininfo';
 
 dotenv.config();
 const app: Express = express();
@@ -101,10 +102,18 @@ app.post(apiroot+ 'users/new', async (req: Request, res: Response) => {
 });
 
 app.post(apiroot+ 'users/login',async (req: Request, res: Response) => {
+  const {isValid,errs,info} = ensureValidLoginInfo(req.body);
+  if(!isValid) {
+    res.status(500);
+    res.json(responses.login.invalidLoginInfo(errs));
+    return;
+  }
+
+  const {username,password} = info;
+
   const client = await sql.connect();
+
   try {
-    const {username,password} = req.body;
-    
     const result = await client.query('SELECT 1 FROM "Users" WHERE "username"=$1 AND "password"=$2',[username,password]);
 
     if(result.rowCount == 1) {
