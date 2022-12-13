@@ -45,7 +45,7 @@ const editSchema = Joi.object({
                     .valid(...nationalities)
                     .optional()
 });
-export default function ensureValidEditUserInfo(reqBody: any) : EditUserInfoValdationResult {
+export function ensureValidEditUserInfo(reqBody: any) : EditUserInfoValdationResult {
     const {value,error} = editSchema.validate(reqBody,
                                               {abortEarly: false});
     if(error) {

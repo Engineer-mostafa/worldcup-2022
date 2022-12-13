@@ -4,7 +4,7 @@ import {ensureValidAuthorizationInfo} from '../../validations/user/authorization
 import {responses} from '../../responses';
 import {sql} from '../../dbinit';
 
-async (req: Request, res: Response) => {
+export default async (req: Request, res: Response) => {
     const {isValid,errs,info} = ensureValidAuthorizationInfo(req.body);
     if(!isValid) {
       res.status(500);

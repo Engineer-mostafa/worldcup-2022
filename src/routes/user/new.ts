@@ -23,7 +23,7 @@ export default async (req: Request, res: Response) => {
         res.json(responses.users.new.usernameAlreadyExists);
       } else {
         await client.query('INSERT INTO "Users"("username","password","firstname","lastname","birthdate","gender","nationality","email","role") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-                          [username,password,firstname,lastname,birthdate,gender,nationality ,email,role]);
+                          [username,password,firstname,lastname,birthdate,gender,nationality ,email,(role=='manager')?"unapprovedManager":role]);
       
         res.status(200);
         res.json(responses.users.new.successful);
