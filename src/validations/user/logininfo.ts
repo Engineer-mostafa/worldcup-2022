@@ -11,7 +11,7 @@ interface LoginInfoValidationResult {
     info?: {username: string, password: string}
 }
 
-export default function ensureValidLoginInfo(reqBody: any) : LoginInfoValidationResult {
+export function ensureValidLoginInfo(reqBody: any) : LoginInfoValidationResult {
     const {value,error} = loginSchema.validate(reqBody,
                                                {abortEarly: false});
     

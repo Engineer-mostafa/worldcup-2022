@@ -5,6 +5,18 @@ const failure = "failure";
 const success = "success";
 
 export const responses = {
+    middleware: {
+        auth: {
+            expiredToken: {
+                result: failure,
+                msg: "invalid token : token expired, login again to obtain a fresh token"
+              },
+            invalidToken: {
+                result: failure,
+                msg: "invalid token : token is not signed with a trusted secret key, i.e. is cryptographically invalid"
+              }
+        }
+    },
     users: {
         new: {
             invalidUserInfo: (errs: string[]) => { return {
@@ -70,19 +82,44 @@ export const responses = {
             }},
             dbException: {
                 result: failure,
-                msg:"cannot approve a user"
+                msg:"cannot approve the user"
             }
         },
-        remove: {},
+        remove: {
+            successful:{
+                result: success,
+                msg: "user removed"
+            },
+            dbException: {
+                result: failure,
+                msg: "cannot remove the user"
+            },
+            invalidAdminSecret: {
+                result: failure,
+                msg: "invalid admin secret, cannot authorize removal"
+            },
+            noSuchUser: (authorizedId: string) => { return {
+                result: failure,
+                msg:"no such user with id "+authorizedId
+            }}
+        },
         edit: {
+            invalidEditUserInfo:(errs: string[]) => { return {
+                result: failure,
+                msg: "invalid edit info : "+ errs.join(" , ")
+            }},
+            noEditsRequested: {
+                result: success,
+                msg: "no edits requested, no edits done"
+            },
             successful: (authedUsername: string) => { return {
-                result: "success",
+                result: success,
                 msg: "successfully edited user "+ (authedUsername)
             }},
             dbException: (authedUsername: string) => { return {
-                result: "failure",
+                result: failure,
                 msg: "cannot edit user "+ (authedUsername as string)
-            }
+            }}
         }
     }
 }

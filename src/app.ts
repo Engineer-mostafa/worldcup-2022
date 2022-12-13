@@ -1,33 +1,23 @@
 //SERVER 
 import express = require('express');
 import { Express, NextFunction, Request, Response } from 'express';
-//DATABASE
-import { Pool } from 'pg';
 //CONFIG
 import dotenv = require('dotenv');
 //JSON RESPONSES
 import { responses } from './responses';
 //VALIDATIONS
-import ensureValidToken from './validations/tokens';
-import ensureValidUserInfo from './validations/userinfo';
-import ensureValidLoginInfo from './validations/logininfo';
-import ensureValidAuthorizationInfo from './validations/authorizationinfo';
-import ensureValidEditUserInfo from './validations/edituserinfo';
+import ensureValidToken from './validations/user/tokens';
+import {ensureValidUserInfo} from './validations/user/userinfo';
+import ensureValidLoginInfo from './validations/user/logininfo';
+import ensureValidAuthorizationInfo from './validations/user/authorizationinfo';
+import ensureValidEditUserInfo from './validations/user/edituserinfo';
 
 dotenv.config();
-const app: Express = express();
+
+const app = express();
 const serverPort = process.env.PORT || 5000; 
-
-const dbsettings = {
-  user: process.env.PGUSER,
-  host: process.env.PGHOST,
-  database: process.env.PGDATABASE,
-  password: process.env.PGPASSWORD,
-  port: +(process.env.PGPORT || 5432)
-};
-const sql = new Pool(dbsettings);
-
 const apiroot = process.env.APIROOT;
+
 app.use(express.json());
 
 const nonAuthedRoutes = [
@@ -45,21 +35,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   } 
 
   const {isValid,isExpired,username} = ensureValidToken(req.get('authorization')?.split(' ')[1]);
-
   if(!isValid) {
     res.status(500);
-    res.json({
-      result: "failure",
-      msg: "invalid token : token is not signed with a trusted secret key"
-    });
+    res.json(responses.middleware.auth.invalidToken);
     return;
   }
   if(isExpired) {
     res.status(500);
-    res.json({
-      result: "failure",
-      msg: "invalid token : token expired, login again to obtain a fresh token"
-    })
+    res.json(responses.middleware.auth.expiredToken)
     return;
   }
 
@@ -195,37 +178,24 @@ app.post(apiroot+ 'users/remove', async (req: Request, res: Response) => {
         await client.query('DELETE FROM "Users" WHERE "id"=$1',[removedID]);
         
         res.status(200);
-        res.json({
-          result: "success",
-          msg: "user was removed"
-        });
+        res.json(responses.users.remove.successful);
       }
       else {
         res.status(500);
-        res.json({    
-          result: "failure",
-          msg: "no such user with id "+removedID
-        });
+        res.json(responses.users.remove.noSuchUser(removedID));
       }
     }
     catch (error) {
       res.status(500);
-      res.json({
-        result: "failure",
-        msg:"cannot remove user"
-      });
+      res.json(responses.users.remove.dbException);
       console.log(error);
     }
     finally {
     client.release();
     }
-  }
-  else {
+  } else {
     res.status(500);
-    res.json({
-      result: "failure",
-      msg: "invalid admin secret, cannot remove user"
-    });
+    res.json(responses.users.remove.invalidAdminSecret);
   }
 });
 
@@ -236,10 +206,11 @@ app.post(apiroot+ 'users/edit', async (req: Request, res: Response) => {
   if(!isValid) {
     res.status(500);
     res.json(responses.users.edit.invalidEditUserInfo(errs));
+    return;
   }
-
-  const dbcolNamesToValues = {'"birthdate"': info.birthdate,'"firstname"':info.firstname, '"lastname"':info.lastname,
-                              '"gender"': info.gender, '"nationality"':info.nationality,'"role"':info.role};
+  const infoo = info!!; const authedUsername = infoo.authedUsername;
+  const dbcolNamesToValues = {'"birthdate"': infoo.birthdate,'"firstname"'   :infoo.firstname  , '"lastname"':infoo.lastname,
+                              '"gender"'   : infoo.gender   ,'"nationality"' :infoo.nationality, '"password"':infoo.password};
 
   let query = 'UPDATE "Users" SET ';
   let numEdits = 0;
@@ -260,18 +231,18 @@ app.post(apiroot+ 'users/edit', async (req: Request, res: Response) => {
     return ;
   }
   
-  query += 'WHERE "username" = $'+ (numEdits+1);
-  values.push(req.body.authedUsername as string);
+  query += ' WHERE "username" = $'+ (numEdits+1);
+  values.push(authedUsername);
   
   const client = await sql.connect();
   try {
     await client.query(query,values);
     res.status(200);
-    res.json(responses.users.edit.successful(req.body.authedUsername as string));
+    res.json(responses.users.edit.successful(authedUsername));
   } 
   catch (error) {
     res.status(500);
-    res.json(responses.users.edit.dbException(req.body.authedUsername as string));
+    res.json(responses.users.edit.dbException(authedUsername));
     console.log(error);
   }
   finally {

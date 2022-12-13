@@ -1,6 +1,6 @@
 import Joi = require('joi');
 
-const nationalities = ['Afghan','Albanian','Algerian','American','Andorran','Angolan','Antiguans and Barbudan','Argentine','Armenian','Aruban','Australian','Austrian','Azerbaijani',
+export const nationalities = ['Afghan','Albanian','Algerian','American','Andorran','Angolan','Antiguans and Barbudan','Argentine','Armenian','Aruban','Australian','Austrian','Azerbaijani',
 'Bahamian','Bahraini','Bangladeshi','Barbadian','Basque','Belarusian','Belgian','Belizean','Beninese','Bermudian','Bhutanese','Bolivian','Bosniak','Bosnians and Herzegovinian','Botswana',
 'Brazilian','Breton','British','British Virgin Islander','Bruneian','Bulgarian','Macedonian Bulgarian','Burkinabé','Burmese','Burundian','Cambodian','Cameroonian','Canadian','Catalan',
 'Cape Verdean','Caymanian','Chaldean','Chadian','Chilean','Chinese','Colombian','Comorian','Congolese (DRC)','Congolese (RotC)','Costa Rican','Croat','Cuban','Cypriot','Czech','Dane',
@@ -73,7 +73,7 @@ interface UserInfoValidationResult {
     info?: UserInfo
 }
 
-export default function ensureValidUserInfo(reqBody : object) : UserInfoValidationResult {
+export function ensureValidUserInfo(reqBody : object) : UserInfoValidationResult {
     const {value,error} = userSchema.validate(reqBody,
                                               {abortEarly: false});
     if(error) {

@@ -12,7 +12,7 @@ interface AuthorizationInfoValidationResult {
 }
 
 
-export default function ensureValidAuthorizationInfo(reqBody: any) : AuthorizationInfoValidationResult {
+export function ensureValidAuthorizationInfo(reqBody: any) : AuthorizationInfoValidationResult {
     const {value,error} = authorizationSchema.validate(reqBody,
                                                        {abortEarly: false});
     
