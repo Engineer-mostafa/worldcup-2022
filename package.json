@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "npm run build , npm install typescript",
+    "build": "npm run build npm install typescript",
     "start": "node dist/app.js",
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q dist/app.js\""
   },
