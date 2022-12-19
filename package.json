@@ -1,7 +1,7 @@
 {
   "scripts": {
     "build": "npm install typescript npm run build",
-    "start": "npm-run-all",
+    "start": "node dist/app.js",
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q dist/app.js\""
   },
   "dependencies": {
